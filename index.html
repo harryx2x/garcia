@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZONA SÍSMICA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .input-group {
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .result {
+            background-color: #e0e0e0;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            min-height: 18px;
+        }
+        
+        .result-value {
+            min-height: 18px;
+            padding: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+        }
+        
+        .warning {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            position: relative;
+        }
+        
+        .warning::before {
+            content: "⚠️";
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .highlight {
+            background-color: #e8f4f8 !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>ZONA SÍSMICA</h1>
+    
+    <div class="form-group">
+        <h2>TIPO DE GRANULOMETRÍA (%)</h2>
+        <div class="form-row">
+            <div class="input-group">
+                <label for="grava">Grava (%)</label>
+                <input type="number" id="grava" min="0" max="100" value="0" oninput="validarTotal(); calcularClasificacion();">
+            </div>
+            <div class="input-group">
+                <label for="arena">Arena (%)</label>
+                <input type="number" id="arena" min="0" max="100" value="0" oninput="validarTotal(); calcularClasificacion();">
+            </div>
+            <div class="input-group">
+                <label for="finos">Finos (%)</label>
+                <input type="number" id="finos" min="0" max="100" value="0" oninput="validarTotal(); calcularClasificacion();">
+            </div>
+        </div>
+        <div id="totalGranulometria" style="color: red; margin-top: 5px;"></div>
+    </div>
+    
+    <div class="form-group">
+        <h2>LÍMITES DE ATTERBERG</h2>
+        <div class="form-row">
+            <div class="input-group">
+                <label for="limiteL">L. Líquido</label>
+                <input type="number" id="limiteL" min="0" max="200" value="0" oninput="calcularIndicePlasticidad(); calcularClasificacion();">
+            </div>
+            <div class="input-group">
+                <label for="limiteP">L. Plástico</label>
+                <input type="number" id="limiteP" min="0" max="200" value="0" oninput="calcularIndicePlasticidad(); calcularClasificacion();">
+            </div>
+            <div class="input-group">
+                <label for="indiceP">Índice de plasticidad</label>
+                <div id="indiceP" class="result">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <h2>CLASIFICACIÓN SUCS</h2>
+        <div class="result-value" id="clasificacionSUCS">-</div>
+        <div class="result-value" id="descripcionSUCS">-</div>
+    </div>
+    
+    <div class="form-group">
+        <h2>RELACIÓN SÍSMICA</h2>
+        <div class="result-value" id="relacionSismica">-</div>
+        <div class="result-value" id="tipoSuelo">-</div>
+    </div>
+    
+    <div class="form-group">
+        <h2>RESULTADO</h2>
+        <div class="result-value" id="resultado">-</div>
+    </div>
+    
+    <div class="warning">
+        <strong>Nota:</strong> A-B-C son suelos moderados para la construcción. D-E podrían ser peligrosos para la construcción.
+    </div>
+    
+    <h3>Tabla de Clasificación SUCS</h3>
+    <table id="tablaSUCS">
+        <thead>
+            <tr>
+                <th>Condición</th>
+                <th>Clasificación SUCS</th>
+                <th>Descripción</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>% Grava ≥ 50% y % Finos < 12%</td>
+                <td>GW o GP</td>
+                <td>Grava bien (GW) o mal graduada (GP), sin muchos finos</td>
+            </tr>
+            <tr>
+                <td>% Grava ≥ 50% y % Finos ≥ 12%</td>
+                <td>GM o GC</td>
+                <td>Grava con finos (GM = limosa, GC = arcillosa)</td>
+            </tr>
+            <tr>
+                <td>% Arena ≥ 50% y % Finos < 12%</td>
+                <td>SW o SP</td>
+                <td>Arena bien (SW) o mal graduada (SP), sin muchos finos</td>
+            </tr>
+            <tr>
+                <td>% Arena ≥ 50% y % Finos ≥ 12%</td>
+                <td>SM o SC</td>
+                <td>Arena con finos (SM = limosa, SC = arcillosa)</td>
+            </tr>
+            <tr>
+                <td>% Finos ≥ 50% y Límite Líquido < 50</td>
+                <td>ML o CL</td>
+                <td>Limo inorgánico (ML) o arcilla de baja plasticidad (CL)</td>
+            </tr>
+            <tr>
+                <td>% Finos ≥ 50% y Límite Líquido ≥ 50</td>
+                <td>MH o CH</td>
+                <td>Limo inorgánico de alta plasticidad (MH) o arcilla de alta plasticidad (CH)</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>Tabla de Relación Sísmica</h3>
+    <table id="tablaSismica">
+        <thead>
+            <tr>
+                <th>Clase de Suelo (NEHRP / ASCE 7-16)</th>
+                <th>Tipo de Suelo</th>
+                <th>Ejemplos de SUCS</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>A (Muy Rígido)</td>
+                <td>Roca dura</td>
+                <td>No aplica</td>
+            </tr>
+            <tr>
+                <td>B (Roca blanda)</td>
+                <td>Suelo denso o roca meteorizada</td>
+                <td>GP, GW, SW, SP</td>
+            </tr>
+            <tr>
+                <td>C (Intermedio)</td>
+                <td>Gravas y arenas densas con pocos finos</td>
+                <td>GW, GP, SW, SP, GC, SC</td>
+            </tr>
+            <tr>
+                <td>D (Suelo blando)</td>
+                <td>Arcillas y arenas con finos moderados</td>
+                <td>CL, ML, SC, SM</td>
+            </tr>
+            <tr>
+                <td>E (Suelo Muy blando)</td>
+                <td>Arcillas blandas y suelos muy finos</td>
+                <td>CH, MH, OL, OH</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <script>
+        function validarTotal() {
+            const grava = parseFloat(document.getElementById('grava').value) || 0;
+            const arena = parseFloat(document.getElementById('arena').value) || 0;
+            const finos = parseFloat(document.getElementById('finos').value) || 0;
+            
+            const total = grava + arena + finos;
+            
+            if (total !== 100) {
+                document.getElementById('totalGranulometria').textContent = 
+                    `El total de granulometría es ${total}%. Debe sumar 100%.`;
+            } else {
+                document.getElementById('totalGranulometria').textContent = '';
+            }
+            
+            return total === 100;
+        }
+        
+        function calcularIndicePlasticidad() {
+            const limiteL = parseFloat(document.getElementById('limiteL').value) || 0;
+            const limiteP = parseFloat(document.getElementById('limiteP').value) || 0;
+            const indiceP = Math.max(0, limiteL - limiteP);
+            
+            document.getElementById('indiceP').textContent = indiceP.toFixed(1);
+            return indiceP;
+        }
+        
+        function calcularClasificacion() {
+            if (!validarTotal()) return;
+            
+            const grava = parseFloat(document.getElementById('grava').value) || 0;
+            const arena = parseFloat(document.getElementById('arena').value) || 0;
+            const finos = parseFloat(document.getElementById('finos').value) || 0;
+            const limiteL = parseFloat(document.getElementById('limiteL').value) || 0;
+            const indiceP = calcularIndicePlasticidad();
+            
+            let clasificacionSUCS = '-';
+            let descripcionSUCS = '-';
+            let relacionSismica = '-';
+            let tipoSuelo = '-';
+            let resultado = '-';
+            
+            // Limpiar cualquier fila resaltada previamente
+            document.querySelectorAll('#tablaSUCS tr, #tablaSismica tr').forEach(row => {
+                row.classList.remove('highlight');
+            });
+            
+            // Determinar clasificación SUCS
+            if (grava >= 50 && finos < 12) {
+                clasificacionSUCS = 'GW o GP';
+                descripcionSUCS = 'Grava bien (GW) o mal graduada (GP), sin muchos finos';
+                resaltarFila('#tablaSUCS tbody tr:nth-child(1)');
+            } else if (grava >= 50 && finos >= 12) {
+                clasificacionSUCS = 'GM o GC';
+                descripcionSUCS = 'Grava con finos (GM = limosa, GC = arcillosa)';
+                resaltarFila('#tablaSUCS tbody tr:nth-child(2)');
+            } else if (arena >= 50 && finos < 12) {
+                clasificacionSUCS = 'SW o SP';
+                descripcionSUCS = 'Arena bien (SW) o mal graduada (SP), sin muchos finos';
+                resaltarFila('#tablaSUCS tbody tr:nth-child(3)');
+            } else if (arena >= 50 && finos >= 12) {
+                clasificacionSUCS = 'SM o SC';
+                descripcionSUCS = 'Arena con finos (SM = limosa, SC = arcillosa)';
+                resaltarFila('#tablaSUCS tbody tr:nth-child(4)');
+            } else if (finos >= 50 && limiteL < 50) {
+                clasificacionSUCS = 'ML o CL';
+                descripcionSUCS = 'Limo inorgánico (ML) o arcilla de baja plasticidad (CL)';
+                resaltarFila('#tablaSUCS tbody tr:nth-child(5)');
+            } else if (finos >= 50 && limiteL >= 50) {
+                clasificacionSUCS = 'MH o CH';
+                descripcionSUCS = 'Limo inorgánico de alta plasticidad (MH) o arcilla de alta plasticidad (CH)';
+                resaltarFila('#tablaSUCS tbody tr:nth-child(6)');
+            }
+            
+            // Determinar relación sísmica basada en SUCS
+            if (['GW', 'GP', 'SW', 'SP'].some(sucs => clasificacionSUCS.includes(sucs))) {
+                relacionSismica = 'B (Roca blanda)';
+                tipoSuelo = 'Suelo denso o roca meteorizada';
+                resaltarFila('#tablaSismica tbody tr:nth-child(2)');
+            } else if (['GW', 'GP', 'SW', 'SP', 'GC', 'SC'].some(sucs => clasificacionSUCS.includes(sucs))) {
+                relacionSismica = 'C (Intermedio)';
+                tipoSuelo = 'Gravas y arenas densas con pocos finos';
+                resaltarFila('#tablaSismica tbody tr:nth-child(3)');
+            } else if (['CL', 'ML', 'SC', 'SM'].some(sucs => clasificacionSUCS.includes(sucs))) {
+                relacionSismica = 'D (Suelo blando)';
+                tipoSuelo = 'Arcillas y arenas con finos moderados';
+                resaltarFila('#tablaSismica tbody tr:nth-child(4)');
+            } else if (['CH', 'MH', 'OL', 'OH'].some(sucs => clasificacionSUCS.includes(sucs))) {
+                relacionSismica = 'E (Suelo Muy blando)';
+                tipoSuelo = 'Arcillas blandas y suelos muy finos';
+                resaltarFila('#tablaSismica tbody tr:nth-child(5)');
+            }
+            
+            // Determinar resultado final
+            if (['A', 'B', 'C'].some(clase => relacionSismica.startsWith(clase))) {
+                resultado = 'A-B-C---- Suelos moderados para la Construcción';
+            } else if (['D', 'E'].some(clase => relacionSismica.startsWith(clase))) {
+                resultado = 'D-E---- Podrían ser peligrosos para la construcción';
+            }
+            
+            document.getElementById('clasificacionSUCS').textContent = clasificacionSUCS;
+            document.getElementById('descripcionSUCS').textContent = descripcionSUCS;
+            document.getElementById('relacionSismica').textContent = relacionSismica;
+            document.getElementById('tipoSuelo').textContent = tipoSuelo;
+            document.getElementById('resultado').textContent = resultado;
+        }
+        
+        function resaltarFila(selector) {
+            const row = document.querySelector(selector);
+            if (row) {
+                row.classList.add('highlight');
+            }
+        }
+        
+        // Inicializar la aplicación
+        window.onload = function() {
+            validarTotal();
+            calcularIndicePlasticidad();
+        };
+    </script>
+</body>
+</html>
